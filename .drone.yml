@@ -1,0 +1,32 @@
+pipeline:
+
+  # Generate a kubeconfig file for the given AWS cluster
+  production-kubeconfig:
+    image: coinlion/kops
+    commands:
+      - kops export kubecfg production
+      - kubectl cluster-info
+    environment:
+      - KUBECONFIG=/kube/config
+      - AWS_REGION=us-east-1
+      - KOPS_STATE_STORE=s3://<S3_KOPS_STATE_STORE>
+    secrets: [ aws_access_key_id, aws_secret_access_key ]
+    volumes:
+      - /kube:/kube
+    when:
+      event: [ push ]
+      branch: [ master ]
+
+  # Recursively apply the config files under the kubernetes directory
+  production-deployment:
+    image: coinlion/kops
+    commands:
+      - kubectl apply --recursive -f kubernetes
+    environment:
+      - KUBECONFIG=/kube/config
+    secrets: [ aws_access_key_id, aws_secret_access_key ]
+    volumes:
+      - /kube:/kube
+    when:
+      event: [ push ]
+      branch: [ master ]
